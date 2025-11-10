@@ -1,0 +1,32 @@
+# Output folders
+WPS-OUTPUT/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.json.bak
+*.xlsx.tmp
+workspace_state.json
+preprocessing_profile.json
+template_usage_history.json
+
+# OS files
+.DS_Store
+Thumbs.db
