@@ -2815,37 +2815,69 @@ class WorkbenchApp(ctk.CTk):
             self.status_label.configure(text=f"저장 실패: {e}", text_color="red")
 
     def save_to_excel(self, data, pdf_path):
-        """Excel 파일에 데이터 추가"""
+        """Excel 파일에 데이터 추가 (개선된 버전 - 헤더 동적 관리)"""
         try:
             import openpyxl
             from openpyxl import Workbook
+            import datetime
 
             excel_file = os.path.join(OUTPUT_FOLDER, "WPS_추출결과.xlsx")
 
+            # 고정 컬럼
+            fixed_columns = ['PDF파일명', '추출일시']
+
+            # 데이터 필드를 정렬하여 일관된 순서 유지
+            data_fields = sorted(data.keys())
+
             if not os.path.exists(excel_file):
+                # 새 파일 생성
                 wb = Workbook()
                 ws = wb.active
                 ws.title = "WPS Data"
-                headers = ['PDF파일명', '추출일시'] + list(data.keys())
+                headers = fixed_columns + data_fields
                 ws.append(headers)
             else:
+                # 기존 파일 로드
                 wb = openpyxl.load_workbook(excel_file)
                 ws = wb.active
 
-            import datetime
+                # 기존 헤더 읽기 (첫 번째 행)
+                existing_headers = [cell.value for cell in ws[1]]
+
+                # 기존 헤더에서 고정 컬럼 제외하고 데이터 필드만 추출
+                existing_data_fields = existing_headers[len(fixed_columns):]
+
+                # 새로운 필드가 있는지 확인
+                all_fields = sorted(set(existing_data_fields + data_fields))
+
+                # 헤더가 변경되었으면 업데이트
+                if existing_data_fields != all_fields:
+                    new_headers = fixed_columns + all_fields
+                    for col_idx, header in enumerate(new_headers, 1):
+                        ws.cell(row=1, column=col_idx, value=header)
+                    logging.info(f"📊 Excel 헤더 업데이트: {len(all_fields)}개 필드")
+
+                # 최종 필드 목록 업데이트
+                data_fields = all_fields
+
+            # 행 데이터 준비 (헤더 순서에 맞춰 데이터 배치)
             row_data = [
-                           os.path.basename(pdf_path),
-                           datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                       ] + list(data.values())
+                os.path.basename(pdf_path),
+                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            ]
+
+            # 각 필드별로 값 추가 (없는 필드는 빈 문자열)
+            for field in data_fields:
+                row_data.append(data.get(field, ''))
 
             ws.append(row_data)
             wb.save(excel_file)
-            logging.info(f"Excel 저장 완료: {excel_file}")
+            logging.info(f"✅ Excel 저장 완료: {excel_file} (행: {ws.max_row})")
 
         except ImportError:
-            logging.warning("openpyxl 라이브러리가 없습니다. pip install openpyxl")
+            logging.warning("⚠️ openpyxl 라이브러리가 없습니다. 설치: pip install openpyxl")
         except Exception as e:
-            logging.error(f"Excel 저장 실패: {e}")
+            logging.error(f"❌ Excel 저장 실패: {e}")
 
     def update_file_button_status(self):
         """파일 버튼 상태 업데이트"""
